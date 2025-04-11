@@ -15,10 +15,12 @@ library(SeuratDisk)
 ```
 
 # Load data
-```{r}
+```{r , fig.height = 8, fig.width = 18, fig.align = "center"}
 adata <- LoadH5Seurat("D:/Datos_Loom/New_section/1_try/ovary.h5seurat")
 #check Data
-DimPlot(adata, reduction = "umap", group.by = "annotation", label = TRUE, pt.size = 1.5, raster = T, repel = T )+ NoLegend()
+DimPlot(adata, reduction = "umap", group.by = "annotation", label = TRUE, pt.size = 1, raster = T, repel = T)
+
+
 ```
 
 # Identify cells expressing "insc" > 1
