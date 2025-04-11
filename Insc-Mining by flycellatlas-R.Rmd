@@ -1,0 +1,124 @@
+---
+title: "Extraccction  Insc by flyccellatlas "
+output: html_notebook
+---
+
+
+#load library
+```{r}
+
+library(Seurat)
+library(ggplot2)
+library(ggrepel)
+library(SeuratDisk)
+
+```
+
+# Load data
+```{r}
+adata <- LoadH5Seurat("D:/Datos_Loom/New_section/1_try/ovary.h5seurat")
+#check Data
+DimPlot(adata, reduction = "umap", group.by = "annotation", label = TRUE, pt.size = 1.5, raster = T, repel = T )+ NoLegend()
+```
+
+# Identify cells expressing "insc" > 1
+```{r}
+
+insc_expression <- adata@assays@RNA@data["insc", ]
+annotation_cells <- colnames(adata)[adata$annotation == "16-cell germline cyst in germarium region 2a and 2b"]
+insc_positive <- insc_expression[annotation_cells] > 1
+```
+
+
+```{r}
+# Create two subsets: insc+ and insc-
+with_insc <- annotation_cells[insc_positive]
+without_insc <- annotation_cells[!insc_positive]
+```
+
+
+```{r}
+# Extract the expression matrix
+group1_expression <- adata@assays$RNA@data[, with_insc]
+group2_expression <- adata@assays$RNA@data[, without_insc]
+```
+
+
+```{r}
+# List of genes
+all_genes <- rownames(adata@assays$RNA@data)
+
+# Filter genes based on their expression
+mean_expression_with_insc <- rowMeans(group1_expression)
+mean_expression_without_insc <- rowMeans(group2_expression)
+```
+
+
+```{r}
+# Keep only those genes that have an average expression greater than 1 in at least one of the groups
+genes_to_keep <- (mean_expression_with_insc > 1) | (mean_expression_without_insc > 1)
+
+# Filter expression matrices and gene list
+group1_expression <- group1_expression[genes_to_keep, ]
+group2_expression <- group2_expression[genes_to_keep, ]
+all_genes <- all_genes[genes_to_keep]
+
+
+# Calculate the fold change and p-values
+results <- data.frame(Gene = all_genes, logFC = numeric(length(all_genes)), p.value = numeric(length(all_genes)))
+```
+
+# T-test code
+```{r}
+for (gene in all_genes) {
+  t_test_result <- t.test(group1_expression[gene, ], group2_expression[gene, ])
+  fold_change <- mean(group2_expression[gene, ]) / mean(group1_expression[gene, ])
+  log2_fold_change <- log2(fold_change)
+  results[results$Gene == gene, "logFC"] <- log2_fold_change
+  results[results$Gene == gene, "p.value"] <- t_test_result$p.value
+}
+
+# Adjust p-values
+results$adj.p.value <- p.adjust(results$p.value, method = "BH")
+
+
+results$annotation <- ifelse(abs(results$logFC) > 1 & results$adj.p.value < 0.05,
+                             ifelse(results$logFC > 0, "without_insc",
+                                    "with_insc"),
+                             "Not significant")
+```
+
+#Graphic
+
+```{r , fig.height = 8, fig.width = 8, fig.align = "center"}
+# Volcano Plot Chart
+p <- ggplot(results, aes(x = logFC, y = -log10(adj.p.value), color = annotation)) +
+  geom_point(alpha = 0.6, size = 2) +
+  scale_color_manual(values = c("with_insc" = "blue",
+                                "without_insc" = "red",
+                                "Not significant" = "black")) +
+  theme_minimal() +
+  labs(title = "Volcano Plot of Differential Gene Expression",
+       subtitle = "Data source: Ovary, 16-cell germline cyst in germarium region 2a and 2b",#here you change the name of the annotation you use
+    x = "Log2 Fold Change",
+    y = "-Log10 Adjusted P-Value",
+    caption = "Analysis method: t-test"
+  ) +
+  geom_hline(yintercept = -log10(0.05), color = "grey", linetype = "dashed") +
+  geom_vline(xintercept = c(-1, 1), color = "grey", linetype = "dashed") +
+  geom_text_repel(data = subset(results, abs(logFC) > 1 & -log10(adj.p.value) > 2),
+                  aes(label = Gene), size = 3) +
+  theme(
+    text = element_text(family = "Arial", size = 12),
+    legend.position = "top",
+    legend.title = element_blank()
+  )
+
+print(p)
+
+```
+
+```{r}
+session_info()
+```
+
