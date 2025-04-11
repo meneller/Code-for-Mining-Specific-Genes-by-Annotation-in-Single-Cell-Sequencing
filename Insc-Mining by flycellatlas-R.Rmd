@@ -1,6 +1,6 @@
 ---
 title: "Extraccction  Insc by flyccellatlas "
-output: html_notebook
+output: R
 ---
 
 
