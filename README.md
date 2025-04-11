@@ -1,9 +1,9 @@
-#1. Data Acquisition and Preprocessing
+# 1. Data Acquisition and Preprocessing
 The analysis began by obtaining data from the Fly Cell Atlas repository, which includes datasets generated using 10x and SmartSeq2 technologies (identified by the string s_fca_biohub_ovary_10xss2). The original files in .h5ad format were converted into .h5seurat format using the SeuratDisk package to facilitate processing within the R environment.
 
 Once converted, the data were loaded into R using the LoadH5Seurat() function. This allowed the integration of the expression data and accompanying cell annotations into a Seurat object, which forms the basis for further analytical procedures.
 
-#2. Selection of Condition and Cell Filtering
+# 2. Selection of Condition and Cell Filtering
 Given the study's focus on the insc gene, a filtering criterion based on the expression levels of this gene was imposed:
 
 Extraction of Expression Data:
@@ -21,7 +21,7 @@ without_insc for cells with low or no insc expression.
 
 Expression matrices were then extracted for each group, labeled as group1_expression and group2_expression.
 
-#3. Gene Filtering and Differential Expression Analysis
+# 3. Gene Filtering and Differential Expression Analysis
 To refine the analysis to relevant genes, the following steps were implemented:
 
 Selection of Expressed Genes:
@@ -52,7 +52,7 @@ Not significant: Genes not meeting the statistical criteria.
 
 In some instances, external data from Excel files containing expected gene lists for each condition were incorporated to further corroborate the analysis.
 
-#4. Data Visualization
+# 4. Data Visualization
 The results were visualized using the ggplot2 package in conjunction with ggrepel to prevent label overlaps. A Volcano Plot was generated where:
 
 The x-axis represents the log₂ fold change.
@@ -63,7 +63,7 @@ A color-coding scheme distinguishes between with_insc (blue), without_insc (red)
 
 Threshold lines (horizontal and vertical) were included in the plot to clearly demarcate the criteria for significance, aiding in the visual interpretation of differential expression.
 
-#5. Export and Documentation of Results
+# 5. Export and Documentation of Results
 The final set of results—comprising both significantly and non-significantly differentially expressed genes—was organized into separate worksheets within Excel files using the openxlsx package. The results were exported as follows:
 
 A worksheet for genes showing significant differential expression (with subdivisions for with_insc and without_insc).
@@ -72,7 +72,7 @@ A worksheet for genes not meeting significance criteria.
 
 Additionally, mean expression values for each condition were merged with the differential expression results, offering a more comprehensive overview in the final output.
 
-6. Conclusion
+# 6. Conclusion
 This methodology integrates state-of-the-art R packages such as Seurat, SeuratDisk, ggplot2, ggrepel, and openxlsx to perform robust differential expression analysis of the insc gene. Through data conversion, stringent filtering, statistical testing (Welch’s t-test), and multiple testing correction (BH), the approach provides a rigorous framework for comparing gene expression between cells with and without insc expression. The final Volcano Plot and Excel exports ensure clear visualization and documentation of the results.
 
 This workflow not only demonstrates a systematic approach to differential expression analysis but also serves as a replicable model for similar studies investigating cellular heterogeneity and gene expression dynamics in ovary data sets.
