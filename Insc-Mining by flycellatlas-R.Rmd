@@ -1,6 +1,8 @@
 ---
 title: "Extraccction  Insc by fly Cell Atlas "
-output: R
+author: "Oscar Mendoza"
+date: '2025-04-11'
+output: pdf_document
 ---
 
 
