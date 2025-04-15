@@ -10,10 +10,10 @@ Extraction of Expression Data:
 The expression values for the insc gene were extracted from the RNA@data slot of the Seurat object.
 
 Annotation-Based Cell Selection:
-A subset of cells (stored in the variable annotation_cells) was defined by selecting only those with the relevant cell annotation—for example, “16-cell germline cyst in germarium region 2a and 2b.” This annotation was chosen according to the specific requirements of the analysis.
+A subset of cells (stored in the variable annotation_cells) was defined by selecting only those with the relevant cell annotation—for example, “young germ cell” This annotation was chosen according to the specific requirements of the analysis.
 
 Expression Thresholding:
-A filtering threshold was applied such that cells were classified as insc+ (expression > 1) or insc– (expression ≤ 1). Consequently, two groups were generated:
+A filtering threshold was applied such that cells were classified as insc+ (expression > 0.01) or insc– (expression ≤ 0.01). Consequently, two groups were generated:
 
 with_insc for cells with elevated insc expression.
 
