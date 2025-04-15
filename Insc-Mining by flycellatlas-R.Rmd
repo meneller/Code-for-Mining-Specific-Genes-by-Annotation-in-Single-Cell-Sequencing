@@ -28,8 +28,8 @@ DimPlot(adata, reduction = "umap", group.by = "annotation", label = TRUE, pt.siz
 # Identify cells expressing "insc" > 1
 ```{r}
 
-insc_expression <- adata@assays@RNA@data["insc", ]
-annotation_cells <- colnames(adata)[adata$annotation == "16-cell germline cyst in germarium region 2a and 2b"]
+insc_expression <- adata@assays$RNA@data["insc", ]
+annotation_cells <- colnames(adata)[adata$annotation == "young germ cell"]
 insc_positive <- insc_expression[annotation_cells] > 1
 ```
 
@@ -75,8 +75,8 @@ results <- data.frame(Gene = all_genes, logFC = numeric(length(all_genes)), p.va
 # T-test code
 ```{r}
 for (gene in all_genes) {
-  t_test_result <- t.test(group1_expression[gene, ], group2_expression[gene, ])
-  fold_change <- mean(group2_expression[gene, ]) / mean(group1_expression[gene, ])
+  t_test_result <- t.test(group2_expression[gene, ],group1_expression[gene, ])
+  fold_change <-  mean(group1_expression[gene, ])/mean(group2_expression[gene, ])
   log2_fold_change <- log2(fold_change)
   results[results$Gene == gene, "logFC"] <- log2_fold_change
   results[results$Gene == gene, "p.value"] <- t_test_result$p.value
@@ -87,8 +87,8 @@ results$adj.p.value <- p.adjust(results$p.value, method = "BH")
 
 
 results$annotation <- ifelse(abs(results$logFC) > 1 & results$adj.p.value < 0.05,
-                             ifelse(results$logFC > 0, "without_insc",
-                                    "with_insc"),
+                             ifelse(results$logFC > 0, "with_insc", "without_insc"
+                                    ),
                              "Not significant")
 ```
 
@@ -98,12 +98,11 @@ results$annotation <- ifelse(abs(results$logFC) > 1 & results$adj.p.value < 0.05
 # Volcano Plot Chart
 p <- ggplot(results, aes(x = logFC, y = -log10(adj.p.value), color = annotation)) +
   geom_point(alpha = 0.6, size = 2) +
-  scale_color_manual(values = c("with_insc" = "blue",
-                                "without_insc" = "red",
+  scale_color_manual(values = c("without_insc" = "#8998C8", "with_insc" = "red",
                                 "Not significant" = "black")) +
   theme_minimal() +
   labs(title = "Volcano Plot of Differential Gene Expression",
-       subtitle = "Data source: Ovary, 16-cell germline cyst in germarium region 2a and 2b",#here you change the name of the annotation you use
+       subtitle = "Data source: Ovary, young germ cell",#here you change the name of the annotation you use
     x = "Log2 Fold Change",
     y = "-Log10 Adjusted P-Value",
     caption = "Analysis method: t-test"
@@ -122,7 +121,87 @@ print(p)
 
 ```
 
+# Dan image:
+# By gene significance in Insc
+```{r , fig.height = 8, fig.width = 8, fig.align = "center"}
+# Filter out only significant with_insc genes and sort by tight p
+with_insc_top <- subset(results, annotation == "with_insc" & abs(logFC) > 1 & -log10(adj.p.value) > 2)
+with_insc_top <- with_insc_top[order(with_insc_top$adj.p.value), ][1:16, ]  # Top 20 significativos
+
+# Volcano Plot with labels only for those 20
+p <- ggplot(results, aes(x = logFC, y = -log10(adj.p.value), color = annotation)) +
+  geom_point(alpha = 0.6, size = 2) +
+  scale_color_manual(values = c("without_insc" = "#8998C8", "with_insc" = "red", "Not significant" = "black")) +
+  theme_minimal() +
+  labs(
+    title = "Volcano Plot of Differential Gene Expression",
+    subtitle = "Data source: Ovary, young germ cell",
+    x = "Log2 Fold Change",
+    y = "-Log10 Adjusted P-Value",
+    caption = "Analysis method: Welch's t-test"
+  ) +
+  geom_hline(yintercept = -log10(0.05), color = "grey", linetype = "dashed") +
+  geom_vline(xintercept = c(-1, 1), color = "grey", linetype = "dashed") +
+  geom_text_repel(data = with_insc_top, aes(label = Gene), size = 3) +
+  theme(
+    text = element_text(family = "Arial", size = 12),
+    legend.position = "top",
+    legend.title = element_blank()
+  )
+
+print(p)
+
+```
+
+
+# By genes of interes
+
+```{r , fig.height = 8, fig.width = 8, fig.align = "center"}
+library(ggplot2)
+library(ggrepel)
+
+# List of genes you want to annotate
+genes_a_anotar <- c("raskol", "mtgo", "Bsg25D", "pgc", "orb", "CG12877", "CG43340",
+                    "msps", "fs(1)K10", "lok", "c(3)G", "sdt", "Kank", "insc", 
+                    "CG10254", "pbl")
+
+# Filter out genes of interest that are also “with_insc” and significant
+with_insc_etiquetados <- subset(results,
+                                annotation == "with_insc" &
+                                abs(logFC) > 1 &
+                                -log10(adj.p.value) > 2 &
+                                Gene %in% genes_a_anotar)
+
+# Volcano Plot only with those genes labeled
+p <- ggplot(results, aes(x = logFC, y = -log10(adj.p.value), color = annotation)) +
+  geom_point(alpha = 0.6, size = 2) +
+  scale_color_manual(values = c("without_insc" = "#8998C8", 
+                                "with_insc" = "red", 
+                                "Not significant" = "black")) +
+  theme_minimal() +
+  labs(
+    title = "Volcano Plot of Differential Gene Expression",
+    subtitle = "Data source: Ovary, young germ cell",
+    x = "Log2 Fold Change",
+    y = "-Log10 Adjusted P-Value",
+    caption = "Analysis method: Welch's t-test"
+  ) +
+  geom_hline(yintercept = -log10(0.05), color = "grey", linetype = "dashed") +
+  geom_vline(xintercept = c(-1, 1), color = "grey", linetype = "dashed") +
+  geom_text_repel(data = with_insc_etiquetados, aes(label = Gene), size = 3) +
+  theme(
+    text = element_text(family = "Arial", size = 12),
+    legend.position = "top",
+    legend.title = element_blank()
+  )
+
+print(p)
+
+```
+
+
 ```{r}
 session_info()
 ```
+
 
