@@ -13,7 +13,7 @@ Annotation-Based Cell Selection:
 A subset of cells (stored in the variable annotation_cells) was defined by selecting only those with the relevant cell annotation—for example, “young germ cell” This annotation was chosen according to the specific requirements of the analysis.
 
 Expression Thresholding:
-A filtering threshold was applied such that cells were classified as insc+ (expression > 0.01) or insc– (expression ≤ 0.01). Consequently, two groups were generated:
+A filtering threshold was applied such that cells were classified as insc+ (expression > 0.0) or insc– (expression ≤ 0.5). Consequently, two groups were generated:
 
 with_insc for cells with elevated insc expression.
 
@@ -42,7 +42,7 @@ Multiple Testing Correction:
 To control the false discovery rate (FDR) due to multiple comparisons, the Benjamini-Hochberg (BH) procedure was applied to adjust the p-values, resulting in an adjusted p-value (adj.p.value) for each gene.
 
 Result Annotation:
-Genes were categorized based on significance criteria (absolute log₂ fold change > 1 and adj.p.value < 0.05) into:
+Genes were categorized based on significance criteria (absolute log₂ fold change > 1 and adj.p.value < 0.05 or 0.01) into:
 
 with_insc: Genes showing higher expression in the with_insc group.
 
@@ -59,7 +59,7 @@ The x-axis represents the log₂ fold change.
 
 The y-axis represents the negative log₁₀ of the adjusted p-value.
 
-A color-coding scheme distinguishes between with_insc (blue), without_insc (red), and non-significant genes (black).
+A color-coding scheme distinguishes between with_insc (red), without_insc (blue), and non-significant genes (black).
 
 Threshold lines (horizontal and vertical) were included in the plot to clearly demarcate the criteria for significance, aiding in the visual interpretation of differential expression.
 
