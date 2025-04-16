@@ -35,13 +35,6 @@ annotation_of_interest <- "young germ cell"
 gene_expression <- adata@assays$RNA@data[gene_of_interest, ]
 annotation_cells <- colnames(adata)[adata$annotation == annotation_of_interest]  
 expressers_positive <- gene_expression[annotation_cells] > 0.5
-
-
-
-
-
-
-
 ```
 
 
@@ -62,7 +55,6 @@ group2_expression <- adata@assays$RNA@data[, annotation_without_expression]
 ```{r}
 # List of genes
 all_genes <- rownames(adata@assays$RNA@data)
-
 ```
 
 
@@ -126,7 +118,6 @@ p <- ggplot(results, aes(x = logFC, y = -log10(adj.p.value), color = annotation)
   )
 
 print(p)
-
 ```
 
 # Dan image:
@@ -158,7 +149,6 @@ p <- ggplot(results, aes(x = logFC, y = -log10(adj.p.value), color = annotation)
   )
 
 print(p)
-
 ```
 
 # By statistical significance
@@ -199,8 +189,6 @@ p <- ggplot(results, aes(x = logFC, y = -log10(adj.p.value), color = annotation)
   )
 
 print(p)
-
-
 ```
 
 # Final Volcano plot with filtering
@@ -249,7 +237,6 @@ p <- ggplot(results_plot, aes(x = logFC, y = -log10(adj.p.value), color = annota
   )
 
 print(p)
-
 ```
 
 #extraction in excel fiile
@@ -278,7 +265,6 @@ writeData(wb, "black", black_data)
 
 # Save the Excel file
 saveWorkbook(wb, "results-insc-poster.xlsx", overwrite = TRUE)
-
 ```
 
 
@@ -314,7 +300,6 @@ overlapping_cells <- intersect(insc_positive, cells_expressing_all_genes)
 cat("Number of cells expressing 'insc':", length(insc_positive), "\n")
 cat("Number of cells expressing 'mu2', 'c(2)M' y 'c(3)G':", length(cells_expressing_all_genes), "\n")
 cat("Number of cells expressing ambos:", length(overlapping_cells), "\n")
-
 ```
 
 
@@ -366,7 +351,6 @@ results_3genes$adj.p.value <- p.adjust(results_3genes$p.value, method = "BH")
 results_3genes$annotation <- ifelse(abs(results_3genes$logFC) > 1 & results_3genes$adj.p.value < 0.01,
                                     ifelse(results_3genes$logFC > 0, "Expressed", "Not Expressed"),
                                     "Not significant")
-
 ```
 
 
@@ -400,8 +384,6 @@ p3g <- ggplot(results_3genes, aes(x = logFC, y = -log10(adj.p.value), color = an
   theme(text = element_text(size = 12), legend.position = "top")
 
 print(p3g)
-
-
 ```
 
 
@@ -427,11 +409,10 @@ writeData(wb, "black", black_data)
 
 # Save the Excel file
 saveWorkbook(wb, "results-3-genes-poster.xlsx", overwrite = TRUE)
-
 ```
 
 ```{r}
-session_info()
+sessionInfo()
 ```
 
 
