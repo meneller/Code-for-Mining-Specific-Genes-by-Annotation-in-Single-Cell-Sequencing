@@ -13,11 +13,11 @@ Annotation-Based Cell Selection:
 A subset of cells (stored in the variable annotation_cells) was defined by selecting only those with the relevant cell annotation—for example, “young germ cell” This annotation was chosen according to the specific requirements of the analysis.
 
 Expression Thresholding:
-A filtering threshold was applied such that cells were classified as insc+ (expression > 0.0) or insc– (expression ≤ 0.5). Consequently, two groups were generated:
+A filtering threshold was applied such that cells were classified as insc+ (expression > 0.5) or insc– (expression ≤ 0.5). Consequently, two groups were generated:
 
-with_insc for cells with elevated insc expression.
+group1_expression for cells with elevated "insc" or ("mu2", "c(2)M", "c(3)G") expression.
 
-without_insc for cells with low or no insc expression.
+group2_expression for cells with low or no "insc" or ("mu2", "c(2)M", "c(3)G") expression.
 
 Expression matrices were then extracted for each group, labeled as group1_expression and group2_expression.
 
@@ -30,7 +30,7 @@ The complete list of genes (all_genes) was obtained from the expression matrix. 
 Statistical Analysis:
 For each selected gene, a differential expression analysis was carried out:
 
-A Welch’s t-test was applied to compare the expression distributions between insc-expressing and non-expressing cells.
+A Welch’s t-test was applied to compare the expression distributions between expressing and non-expressing cells of gene of interes.
 
 The fold change was calculated as the ratio of the mean expression in the without_insc group to that in the with_insc group and then transformed to log₂.
 
