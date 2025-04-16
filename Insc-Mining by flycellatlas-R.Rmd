@@ -1,14 +1,14 @@
 ---
 title: "Extraccction  Insc by fly Cell Atlas "
+output: html_notebook
 author: "Oscar Mendoza"
 date: '2025-04-11'
-output: pdf_document
 ---
 
 
 #load library
 ```{r}
-
+library(VennDiagram)
 library(Seurat)
 library(ggplot2)
 library(ggrepel)
@@ -18,33 +18,44 @@ library(SeuratDisk)
 
 # Load data
 ```{r , fig.height = 8, fig.width = 18, fig.align = "center"}
-adata <- LoadH5Seurat("D:/Datos_Loom/New_section/1_try/ovary.h5seurat")
+#adata <- LoadH5Seurat("D:/Datos_Loom/New_section/1_try/ovary.h5seurat")
 #check Data
 DimPlot(adata, reduction = "umap", group.by = "annotation", label = TRUE, pt.size = 1, raster = T, repel = T)
 
 
 ```
 
-# Identify cells expressing "insc" > 1
+# Identify cells expressing "insc" > 0.5
 ```{r}
 
-insc_expression <- adata@assays$RNA@data["insc", ]
-annotation_cells <- colnames(adata)[adata$annotation == "young germ cell"]
-insc_positive <- insc_expression[annotation_cells] > 1
+gene_of_interest <- "insc"
+annotation_of_interest <- "young germ cell"
+
+# Identificar células que expresan el gen de interés > 0.5
+gene_expression <- adata@assays$RNA@data[gene_of_interest, ]
+annotation_cells <- colnames(adata)[adata$annotation == annotation_of_interest]  
+expressers_positive <- gene_expression[annotation_cells] > 0.5
+
+
+
+
+
+
+
 ```
 
 
 ```{r}
 # Create two subsets: insc+ and insc-
-with_insc <- annotation_cells[insc_positive]
-without_insc <- annotation_cells[!insc_positive]
+annotation_with_expression <- annotation_cells[expressers_positive]
+annotation_without_expression <- annotation_cells[!expressers_positive]
 ```
 
 
 ```{r}
 # Extract the expression matrix
-group1_expression <- adata@assays$RNA@data[, with_insc]
-group2_expression <- adata@assays$RNA@data[, without_insc]
+group1_expression <- adata@assays$RNA@data[, annotation_with_expression]
+group2_expression <- adata@assays$RNA@data[, annotation_without_expression]
 ```
 
 
@@ -52,64 +63,61 @@ group2_expression <- adata@assays$RNA@data[, without_insc]
 # List of genes
 all_genes <- rownames(adata@assays$RNA@data)
 
-# Filter genes based on their expression
-mean_expression_with_insc <- rowMeans(group1_expression)
-mean_expression_without_insc <- rowMeans(group2_expression)
 ```
 
 
 ```{r}
-# Keep only those genes that have an average expression greater than 1 in at least one of the groups
-genes_to_keep <- (mean_expression_with_insc > 1) | (mean_expression_without_insc > 1)
-
-# Filter expression matrices and gene list
-group1_expression <- group1_expression[genes_to_keep, ]
-group2_expression <- group2_expression[genes_to_keep, ]
-all_genes <- all_genes[genes_to_keep]
-
-
 # Calculate the fold change and p-values
-results <- data.frame(Gene = all_genes, logFC = numeric(length(all_genes)), p.value = numeric(length(all_genes)))
+results <- data.frame(Gene = all_genes, logFC = numeric(length(all_genes)), p.value = numeric(length(all_genes)),
+                      mean_expressers = numeric(length(all_genes)), mean_non_expressers = numeric(length(all_genes)))
 ```
 
 # T-test code
+
 ```{r}
 for (gene in all_genes) {
-  t_test_result <- t.test(group2_expression[gene, ],group1_expression[gene, ])
-  fold_change <-  mean(group1_expression[gene, ])/mean(group2_expression[gene, ])
+  t_test_result <- t.test(group1_expression[gene, ], group2_expression[gene, ])
+  fold_change <- mean(group1_expression[gene, ]) / mean(group2_expression[gene, ])
   log2_fold_change <- log2(fold_change)
   results[results$Gene == gene, "logFC"] <- log2_fold_change
   results[results$Gene == gene, "p.value"] <- t_test_result$p.value
+  results[results$Gene == gene, "mean_expressers"] <- mean(group1_expression[gene, ])
+  results[results$Gene == gene, "mean_non_expressers"] <- mean(group2_expression[gene, ])
 }
+
 
 # Adjust p-values
 results$adj.p.value <- p.adjust(results$p.value, method = "BH")
 
-
-results$annotation <- ifelse(abs(results$logFC) > 1 & results$adj.p.value < 0.05,
-                             ifelse(results$logFC > 0, "with_insc", "without_insc"
-                                    ),
+# Change the p-value cutoff to 0.01 
+results$annotation <- ifelse(abs(results$logFC) > 1 & results$adj.p.value < 0.01, 
+                             ifelse(results$logFC > 0, "expressers", 
+                                    "non_expressers"), 
                              "Not significant")
 ```
 
-#Graphic
 
-```{r , fig.height = 8, fig.width = 8, fig.align = "center"}
+
+# Graphic
+
+```{r , fig.height = 8, fig.width = 9, fig.align = "center"}
 # Volcano Plot Chart
 p <- ggplot(results, aes(x = logFC, y = -log10(adj.p.value), color = annotation)) +
   geom_point(alpha = 0.6, size = 2) +
-  scale_color_manual(values = c("without_insc" = "#8998C8", "with_insc" = "red",
+  scale_color_manual(values = c("non_expressers" = "#8998C8", 
+                                "expressers" = "red", 
                                 "Not significant" = "black")) +
   theme_minimal() +
-  labs(title = "Volcano Plot of Differential Gene Expression",
-       subtitle = "Data source: Ovary, young germ cell",#here you change the name of the annotation you use
+  labs(
+    title = paste("Volcano Plot of Differential Gene Expression for", gene_of_interest),
+    subtitle = paste("Data source:", annotation_of_interest),
     x = "Log2 Fold Change",
     y = "-Log10 Adjusted P-Value",
     caption = "Analysis method: t-test"
   ) +
-  geom_hline(yintercept = -log10(0.05), color = "grey", linetype = "dashed") +
+  geom_hline(yintercept = -log10(0.01), color = "grey", linetype = "dashed") +
   geom_vline(xintercept = c(-1, 1), color = "grey", linetype = "dashed") +
-  geom_text_repel(data = subset(results, abs(logFC) > 1 & -log10(adj.p.value) > 2),
+  geom_text_repel(data = subset(results, abs(logFC) > 1 & -log10(adj.p.value) > 2), 
                   aes(label = Gene), size = 3) +
   theme(
     text = element_text(family = "Arial", size = 12),
@@ -125,13 +133,13 @@ print(p)
 # By gene significance in Insc
 ```{r , fig.height = 8, fig.width = 8, fig.align = "center"}
 # Filter out only significant with_insc genes and sort by tight p
-with_insc_top <- subset(results, annotation == "with_insc" & abs(logFC) > 1 & -log10(adj.p.value) > 2)
+with_insc_top <- subset(results, annotation == "expressers" & abs(logFC) > 1 & -log10(adj.p.value) > 2)
 with_insc_top <- with_insc_top[order(with_insc_top$adj.p.value), ][1:16, ]  # Top 20 significativos
 
 # Volcano Plot with labels only for those 20
 p <- ggplot(results, aes(x = logFC, y = -log10(adj.p.value), color = annotation)) +
   geom_point(alpha = 0.6, size = 2) +
-  scale_color_manual(values = c("without_insc" = "#8998C8", "with_insc" = "red", "Not significant" = "black")) +
+  scale_color_manual(values = c("non_expressers" = "#8998C8", "expressers" = "red", "Not significant" = "black")) +
   theme_minimal() +
   labs(
     title = "Volcano Plot of Differential Gene Expression",
@@ -153,31 +161,25 @@ print(p)
 
 ```
 
-
-# By genes of interes
+# By statistical significance
 
 ```{r , fig.height = 8, fig.width = 8, fig.align = "center"}
-library(ggplot2)
-library(ggrepel)
+# Ensure insc is always labeled and drawn
+insc_row <- subset(results, Gene == "insc")
 
-# List of genes you want to annotate
-genes_a_anotar <- c("raskol", "mtgo", "Bsg25D", "pgc", "orb", "CG12877", "CG43340",
-                    "msps", "fs(1)K10", "lok", "c(3)G", "sdt", "Kank", "insc", 
-                    "CG10254", "pbl")
+# Filter the top 16 con_incs for tagging
+with_insc_top <- subset(results, annotation == "expressers" & abs(logFC) > 1 & -log10(adj.p.value) > 2)
+with_insc_top <- with_insc_top[order(with_insc_top$adj.p.value), ][1:16, ]
 
-# Filter out genes of interest that are also “with_insc” and significant
-with_insc_etiquetados <- subset(results,
-                                annotation == "with_insc" &
-                                abs(logFC) > 1 &
-                                -log10(adj.p.value) > 2 &
-                                Gene %in% genes_a_anotar)
+# Add 'insc' if it is not already included
+if (!"insc" %in% with_insc_top$Gene) {
+  with_insc_top <- rbind(with_insc_top, insc_row)
+}
 
-# Volcano Plot only with those genes labeled
+# Plot with visual limits but without cutting points
 p <- ggplot(results, aes(x = logFC, y = -log10(adj.p.value), color = annotation)) +
   geom_point(alpha = 0.6, size = 2) +
-  scale_color_manual(values = c("without_insc" = "#8998C8", 
-                                "with_insc" = "red", 
-                                "Not significant" = "black")) +
+  scale_color_manual(values = c("non_expressers" = "#8998C8", "expressers" = "red", "Not significant" = "black")) +
   theme_minimal() +
   labs(
     title = "Volcano Plot of Differential Gene Expression",
@@ -188,7 +190,58 @@ p <- ggplot(results, aes(x = logFC, y = -log10(adj.p.value), color = annotation)
   ) +
   geom_hline(yintercept = -log10(0.05), color = "grey", linetype = "dashed") +
   geom_vline(xintercept = c(-1, 1), color = "grey", linetype = "dashed") +
-  geom_text_repel(data = with_insc_etiquetados, aes(label = Gene), size = 3) +
+  geom_text_repel(data = with_insc_top, aes(label = Gene), size = 3, max.overlaps = Inf) +
+  coord_cartesian(xlim = c(-4.5, 10), ylim = c(0, 19.5)) +
+  theme(
+    text = element_text(family = "Arial", size = 12),
+    legend.position = "top",
+    legend.title = element_blank()
+  )
+
+print(p)
+
+
+```
+
+# Final Volcano plot with filtering
+
+```{r , fig.height = 6, fig.width = 8, fig.align = "center"}
+# Define visual boundaries
+x_lim <- c(-4.5, 11)
+y_lim <- c(0, 20)
+
+# 1. Filter all genes within the range of the graph.
+results_plot <- results[
+  results$logFC >= x_lim[1] & results$logFC <= x_lim[2] &
+  -log10(results$adj.p.value) >= y_lim[1] & -log10(results$adj.p.value) <= y_lim[2],
+]
+
+# 2. Filter out only genes annotated as “expressers”.
+with_insc_genes <- results_plot[results_plot$annotation == "expressers", ]
+
+# 3. Select the 16 most significant genes by adj.p.value.
+top16_with_insc <- with_insc_genes[order(with_insc_genes$adj.p.value), ][1:16, ]
+
+# Volcano Plot
+p <- ggplot(results_plot, aes(x = logFC, y = -log10(adj.p.value), color = annotation)) +
+  geom_point(alpha = 0.6, size = 2) +
+  scale_color_manual(values = c("non_expressers" = "#8998C8", "expressers" = "red", "Not significant" = "black")) +
+  theme_minimal() +
+  labs(
+    title = "Volcano Plot of Differential Gene Expression",
+    subtitle = "Data source: Ovary, young germ cell",
+    x = "Log2 Fold Change",
+    y = "-Log10 Adjusted P-Value",
+    caption = "Analysis method: Welch's t-test"
+  ) +
+  geom_hline(yintercept = -log10(0.05), color = "grey", linetype = "dashed") +
+  geom_vline(xintercept = c(-1, 1), color = "grey", linetype = "dashed") +
+  geom_text_repel(
+    data = top16_with_insc,
+    aes(label = Gene),
+    size = 3,
+    max.overlaps = Inf
+  ) +
   theme(
     text = element_text(family = "Arial", size = 12),
     legend.position = "top",
@@ -199,9 +252,187 @@ print(p)
 
 ```
 
+#extraction in excel fiile
+
+```{r}
+library(openxlsx)
+
+# Create a new Excel file
+wb <- createWorkbook()
+
+# Add tabs and write data
+blue_data <- results[results$annotation == "non_expressers",]
+blue_data <- blue_data[order(row.names(blue_data)),]
+addWorksheet(wb, "blue")
+writeData(wb, "blue", blue_data)
+
+red_data <- results[results$annotation == "expressers",]
+red_data <- red_data[order(row.names(red_data)),]
+addWorksheet(wb, "red")
+writeData(wb, "red", red_data)
+
+black_data <- results[results$annotation == "Not significant",]
+black_data <- black_data[order(row.names(black_data)),]
+addWorksheet(wb, "black")
+writeData(wb, "black", black_data)
+
+# Save the Excel file
+saveWorkbook(wb, "results-insc-poster.xlsx", overwrite = TRUE)
+
+```
+
+
+# Final Part
+# the second, make a list of cells expressing the 3 genes (“c(3)G”, “c(2)M”, “mu2”) and extract their genes.
+
+#verification
+
+```{r}
+
+# Defining genes of interest and annotation
+gene_of_interest <- "insc"
+genes_of_interest <- c("mu2", "c(2)M", "c(3)G")
+annotation_of_interest <- "young germ cell"
+expression_threshold <- 0.5
+
+# Filter by annotation of interest
+adata_filtered <- subset(adata, subset = annotation == annotation_of_interest)
+
+# Identify cells expressing the gene of interest (insc) > 0.5
+insc_expression <- adata_filtered@assays$RNA@data[gene_of_interest, ]
+annotation_cells <- colnames(adata_filtered)  
+insc_positive <- annotation_cells[insc_expression > expression_threshold]
+
+# Identify cells expressing the three genes of interest above the threshold.
+gene_expressions <- adata_filtered@assays$RNA@data[genes_of_interest, ]
+cells_expressing_all_genes <- colnames(adata_filtered)[apply(gene_expressions > expression_threshold, 2, all)]
+
+# Find the intersection of these two sets of cells.
+overlapping_cells <- intersect(insc_positive, cells_expressing_all_genes)
+
+# Print the result
+cat("Number of cells expressing 'insc':", length(insc_positive), "\n")
+cat("Number of cells expressing 'mu2', 'c(2)M' y 'c(3)G':", length(cells_expressing_all_genes), "\n")
+cat("Number of cells expressing ambos:", length(overlapping_cells), "\n")
+
+```
+
+
+
+
+#2nd list ("mu2", "c(2)M", "c(3)G")
+
+```{r}
+# --- PART ("mu2", "c(2)M", "c(3)G") ---
+# Filter out cells expressing ALL genes of interest
+genes_of_interest <- c("mu2", "c(2)M", "c(3)G")
+annotation_of_interest <- "young germ cell"
+expression_threshold <- 0.5
+
+adata_filtered_3g <- subset(adata, subset = annotation == annotation_of_interest)
+
+cells_expressing_all_genes <- colnames(adata_filtered_3g)[
+  apply(adata_filtered_3g@assays$RNA@data[genes_of_interest, ] > expression_threshold, 2, all)
+]
+
+# Identify cells that do not express all genes of interest above the threshold.
+cells_not_expressing_all_genes <- colnames(adata_filtered_3g)[
+  apply(adata_filtered_3g@assays$RNA@data[genes_of_interest, ] <= expression_threshold, 2, any)
+]
+
+# Create subsets of data for the two cell populations.
+adata_expressing_3genes <- subset(adata_filtered_3g, cells = cells_expressing_all_genes)
+adata_not_expressing_3genes <- subset(adata_filtered_3g, cells = cells_not_expressing_all_genes)
+
+# Verificar si hay células repetidas entre los dos subconjuntos
+stopifnot(length(intersect(cells_expressing_all_genes, cells_not_expressing_all_genes)) == 0)
+
+# Calculate fold change, p-values and expression averages
+all_genes <- rownames(adata@assays$RNA@data)
+results_3genes <- data.frame(Gene = all_genes, logFC = NA, p.value = NA,
+                             mean_expressers = NA, mean_non_expressers = NA)
+for (gene in all_genes) {
+  g1 <- adata_expressing_3genes@assays$RNA@data[gene, ]
+  g2 <- adata_not_expressing_3genes@assays$RNA@data[gene, ]
+  ttest <- t.test(g1, g2)
+  logFC <- log2((mean(g1)) / (mean(g2)))
+  results_3genes[results_3genes$Gene == gene, ] <- list(
+    gene, logFC, ttest$p.value, mean(g1), mean(g2)
+  )
+}
+
+# p-value adjustment and annotation
+results_3genes$adj.p.value <- p.adjust(results_3genes$p.value, method = "BH")
+results_3genes$annotation <- ifelse(abs(results_3genes$logFC) > 1 & results_3genes$adj.p.value < 0.01,
+                                    ifelse(results_3genes$logFC > 0, "Expressed", "Not Expressed"),
+                                    "Not significant")
+
+```
+
+
+```{r , fig.height = 8, fig.width = 8, fig.align = "center"}
+# 1. Filter out significant expressed genes
+top_genes <- subset(results_3genes, annotation == "Expressed" & abs(logFC) > 1 & -log10(adj.p.value) > 2)
+
+# 2. Order by adj.p.value (most significant first)
+top_genes <- top_genes[order(top_genes$adj.p.value), ][1:16, ]  # Top 16
+
+# 3. Volcano Plot con etiquetas
+p3g <- ggplot(results_3genes, aes(x = logFC, y = -log10(adj.p.value), color = annotation)) +
+  geom_point(alpha = 0.6, size = 2) +
+  geom_text_repel(
+    data = top_genes,
+    aes(label = Gene),
+    size = 3,
+    max.overlaps = Inf
+  ) +
+  scale_color_manual(values = c("Expressed" = "red", "Not Expressed" = "blue", "Not significant" = "black")) +
+  labs(
+    title = "Volcano Plot: Genes mu2, c(2)M, c(3)G",
+    subtitle = "Condition: young germ cell",
+    x = "Log2 Fold Change",
+    y = "-Log10 Adjusted P-Value"
+  ) +
+  geom_vline(xintercept = c(-1, 1), linetype = "dashed", color = "gray") +
+  geom_hline(yintercept = -log10(0.01), linetype = "dashed", color = "gray") +
+  coord_cartesian(xlim = c(-4.5, 10), ylim = c(0, 20)) +
+  theme_minimal() +
+  theme(text = element_text(size = 12), legend.position = "top")
+
+print(p3g)
+
+
+```
+
+
+```{r}
+# Create a new Excel file
+wb <- createWorkbook()
+
+# Add tabs and write data
+blue_data <- results[results$annotation == "non_expressers",]
+blue_data <- blue_data[order(row.names(blue_data)),]
+addWorksheet(wb, "blue")
+writeData(wb, "blue", blue_data)
+
+red_data <- results[results$annotation == "expressers",]
+red_data <- red_data[order(row.names(red_data)),]
+addWorksheet(wb, "red")
+writeData(wb, "red", red_data)
+
+black_data <- results[results$annotation == "Not significant",]
+black_data <- black_data[order(row.names(black_data)),]
+addWorksheet(wb, "black")
+writeData(wb, "black", black_data)
+
+# Save the Excel file
+saveWorkbook(wb, "results-3-genes-poster.xlsx", overwrite = TRUE)
+
+```
 
 ```{r}
 session_info()
 ```
+
 
 
