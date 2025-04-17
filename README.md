@@ -1,3 +1,6 @@
+Preview
+https://htmlpreview.github.io/?https://raw.githubusercontent.com/meneller/Code-for-Mining-Specific-Genes-by-Annotation-in-Single-Cell-Sequencing/main/Insc-Mining%20by%20flycellatlas-R.nb.html
+
 # 1. Data Acquisition and Preprocessing
 The analysis began by obtaining data from the Fly Cell Atlas repository, which includes datasets generated using 10x and SmartSeq2 technologies (identified by the string s_fca_biohub_ovary_10xss2 [https://cloud.flycellatlas.org/index.php/s/dyDk9BCg28HgzLk]). The original files in .h5ad format were converted into .h5seurat format using the SeuratDisk package to facilitate processing within the R environment.
 
